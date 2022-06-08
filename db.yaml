@@ -1,0 +1,5 @@
+auth:
+  rootPassword: ctfd
+  database: ctfd
+  username: ctfd
+  password: ctfd

@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+   name: logs
+   annotations:
+     author: {{.Values.author}}
+spec:
+   accessModes:
+      - ReadWriteOnce
+   resources:
+      requests:
+         storage: 500Mi
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+   name: uploads
+   annotations:
+     author: {{.Values.author}}
+spec:
+   accessModes:
+      - ReadWriteOnce
+   resources:
+      requests:
+         storage: 500Mi
+
+      
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # name: ctfd
+  name: {{.Values.name}}
+  namespace: {{.Values.namespace}}
+  annotations:
+    author: {{.Values.author}}
+spec:
+  # securityContext:
+  #   fsGroup: 2000
+  selector:
+    matchLabels:
+      app: {{.Values.name}}
+      # app: ctfd-app
+  template:
+    metadata:
+      labels:
+        app: {{.Values.name}}
+        # app: ctfd-app
+    spec:
+      securityContext:
+        fsGroup: 2000
+      containers:
+      - name:  {{.Values.name}}
+        image: ctfd/ctfd
+        env:
+          - name: UPLOAD_FOLDER
+            value: /var/uploads
+          - name: DATABASE_URL
+            # value: mysql+pymysql://ctfd:ctfd@db-mariadb.default.svc.cluster.local/ctfd
+            value: {{.Values.database.url}}
+          - name: REDIS_URL
+            # value: redis://:ctfd@redis-master.default.svc.cluster.local:6379/ctfd
+            value: {{.Values.redis.url}}
+          - name: WORKERS
+            value: "1"
+          - name: LOG_FOLDER
+            # value: /var/log/CTFd
+            value: {{.Values.log_folder}}
+          - name: ACCESS_LOG
+            value: none
+          - name: ERROR_LOG
+            value: none
+          - name: REVERSE_PROXY
+            value: "true"
+        volumeMounts:
+          - mountPath: /var/log/CTFd
+            name: logs
+          - mountPath: /var/uploads
+            name: uploads
+          # - .data/CTFd/logs:/var/log/CTFd
+          # - .data/CTFd/uploads:/var/uploads
+        resources:
+          limits:
+            memory: {{.Values.memory}}
+            cpu: {{.Values.cpu}}
+          requests:
+            memory: {{.Values.memory}}
+            cpu: {{.Values.cpu}}
+        ports:
+        # - containerPort: 8000
+          - containerPort: {{.Values.ports.container}}
+      volumes:
+        - name: logs
+          persistentVolumeClaim:
+            claimName: logs
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads
+      # volumes: 
+      #   - name: logs
+      #     persistentVolumeClaim:
+      #       claimName: logs
+      #   - name: uploads
+      #     persistentVolumeClaim:
+      #         claimName: uploads
+          
